@@ -1,9 +1,16 @@
-from flask import Flask
-from flask_restful import Resource, Api, reqparse
+from flask import Flask, jsonify
+from flask_restful import Resource, Api, reqparse, current_app
 from sqlalchemy import create_engine, select, insert, MetaData, Table, Column, Integer, String, ForeignKey, Sequence
 import decimal, datetime
 import json
 import bcrypt
+from flask_jwt import jwt_required
+from flask_jwt_simple import (
+    JWTManager, jwt_required, create_jwt, get_jwt
+)
+from datetime import datetime
+
+# from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, jwt_refresh_token_required, get_jwt_identity, get_raw_jwt
 
 engine = create_engine('mysql://freefinder_admin:test123@70.79.100.163/ff_db')
 conn = engine.connect()
@@ -11,9 +18,13 @@ conn = engine.connect()
 app = Flask(__name__)
 api = Api(app)
 
+app.config['JWT_SECRET_KEY'] = 'super-secret'
+app.config['JWT_KEY_LOCATION'] = ['headers']
+
+jwt = JWTManager(app)
+
+
 metadata = MetaData()
-
-
 
 users = Table('users', metadata,
     Column('id', Integer, Sequence('user_id_seq'), primary_key=True),
@@ -23,6 +34,17 @@ users = Table('users', metadata,
     Column('phone', String(50)),
     Column('location', String(50)),
 )
+
+@jwt.jwt_data_loader
+def add_claims_to_access_token(email):
+    now = datetime.utcnow()
+    return {
+        'exp': now + current_app.config['JWT_EXPIRES'],
+        'iat': now,
+        'nbf': now,
+        'sub': email,
+        # 'roles': roles
+    }
 
 # metadata.create_all(engine)
 #Usage: json.dumps([dict(r) for r in res], default=alchemyencoder)
@@ -50,15 +72,36 @@ class User(Resource):
         except Exception as e:
             return {'error': str(e)}
 
+
+    @jwt_required
+    def put(self, user_id):
+        print('PUT /users/' + user_id)
+        # print(get_raw_jwt())
+
 class Users(Resource):
-    def post(self):
-        # Parse the arguments
-        parser = reqparse.RequestParser()
+    def make_parser_args(self, parser):
         parser.add_argument('email', type=str, help='Email address to create user')
         parser.add_argument('name', type=str, help='Name to create user')
         parser.add_argument('password', type=str, help='Password to create user')
         parser.add_argument('phone', type=str, help='Phone to create user')
         parser.add_argument('location', type=str, help='Location to create user')
+
+    def get(self):
+        try:
+            stmt = select([users.c.id, users.c.name, users.c.email, users.c.phone, users.c.location])\
+                .select_from(users)
+            res = conn.execute(stmt)
+            res_dict = [dict(r) for r in res]
+            return res_dict
+
+        except Exception as e:
+            return {'error': str(e)}
+
+
+    def post(self):
+        # Parse the arguments
+        parser = reqparse.RequestParser()
+        self.make_parser_args(parser)
         args = parser.parse_args()
 
         _userEmail = args['email']
@@ -87,9 +130,38 @@ class Users(Resource):
         # print(_userEmail, _userName, _userPassword, _userPhone, _userLocation)
 
 
+class Login(Resource):
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('email', type=str, help='Email address to create user')
+        parser.add_argument('password', type=str, help='Password to create user')
+        args = parser.parse_args()
+
+        _userEmail = args['email']
+        _userPassword = args['password']
+
+        stmt = select([users.c.id, users.c.name, users.c.email, users.c.phone, users.c.location, users.c.password]) \
+            .select_from(users).where(users.c.email == _userEmail)
+        res = conn.execute(stmt)
+        res_dict = [dict(r) for r in res]
+        if not len(res_dict):
+            return {'message': 'Invalid Credentials'}, 401
+        encrypted_pass = res_dict[0]['password']
+        if bcrypt.checkpw(_userPassword.encode('utf-8'), hashed_password=encrypted_pass.encode('utf-8')):
+            ret = {'token': create_jwt(res_dict[0]['email'])}
+            res = jsonify(ret)
+            res.status_code = 200
+            return res
+
+        else:
+            return {'message': 'Invalid Credentials'}, 401
+
+
+
 
 api.add_resource(Users, '/users')
 api.add_resource(User, '/users/<string:user_id>')
+api.add_resource(Login, '/login')
 
 if __name__ == '__main__':
     app.run(debug=True)
