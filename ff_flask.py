@@ -115,6 +115,13 @@ class Posts(Resource):
 
 
 class User(Resource):
+    def make_parser_args(self, parser):
+        parser.add_argument('email', type=str, help='Email address to create user')
+        parser.add_argument('name', type=str, help='Name to create user')
+        parser.add_argument('password', type=str, help='Password to create user')
+        parser.add_argument('phone', type=str, help='Phone to create user')
+        parser.add_argument('location', type=str, help='Location to create user')
+
     def get(self, user_id):
         try:
             stmt = select([users.c.id, users.c.name, users.c.email, users.c.phone, users.c.location])\
@@ -133,8 +140,11 @@ class User(Resource):
 
     @jwt_required
     def put(self, user_id):
+        parser = reqparse.RequestParser()
+        self.make_parser_args(parser)
+        args = parser.parse_args()
         print('PUT /users/' + user_id)
-        # print(get_raw_jwt())
+        print(get_jwt())
 
 class Users(Resource):
     def make_parser_args(self, parser):
