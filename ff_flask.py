@@ -50,13 +50,14 @@ posts = Table('posts', metadata,
 
 
 @jwt.jwt_data_loader
-def add_claims_to_access_token(email):
+def add_claims_to_access_token(body):
     now = datetime.utcnow()
     return {
         'exp': now + current_app.config['JWT_EXPIRES'],
         'iat': now,
         'nbf': now,
-        'sub': email,
+        'sub': body['email'],
+        'id': body['id'],
         # 'roles': roles
     }
 
@@ -216,7 +217,10 @@ class Login(Resource):
             return {'message': 'Invalid Credentials'}, 401
         encrypted_pass = res_dict[0]['password']
         if bcrypt.checkpw(_userPassword.encode('utf-8'), hashed_password=encrypted_pass.encode('utf-8')):
-            ret = {'token': create_jwt(res_dict[0]['email'])}
+            ret = {'token': create_jwt({
+                'email': res_dict[0]['email'],
+                'id': res_dict[0]['id']
+            })}
             res = jsonify(ret)
             res.status_code = 200
             return res
