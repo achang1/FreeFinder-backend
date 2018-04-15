@@ -41,7 +41,7 @@ posts = Table('posts', metadata,
     Column('title', String(50), nullable=False),
     Column('time', DateTime, nullable=False),
     Column('expiry', DateTime),
-    Column('last_modified', DateTime, onupdate=datetime.now, nullable=False),
+    Column('last_modified', DateTime, onupdate=datetime.now(), nullable=False),
     Column('description', String(5000), nullable=False),
     Column('location', String(50), nullable=False),
     Column('lat', Float),
@@ -64,7 +64,7 @@ def add_claims_to_access_token(email):
 #Usage: json.dumps([dict(r) for r in res], default=alchemyencoder)
 def alchemyencoder(obj):
     """JSON encoder function for SQLAlchemy special classes."""
-    if isinstance(obj, datetime.date):
+    if isinstance(obj, (datetime, DateTime)):
         return obj.isoformat()
     elif isinstance(obj, decimal.Decimal):
         return float(obj)
@@ -79,17 +79,44 @@ class Post(Resource):
             res_dict = [dict(r) for r in res]
             if len(res_dict) == 0:
                 return {}, 404
-            return_dict = json.dumps([dict(r) for r in res], default=alchemyencoder)
-            print(return_dict)
-            return return_dict
+            serialize_dict = json.dumps(res_dict[0], default=alchemyencoder)
+            deserialize_dict = json.loads(serialize_dict)
+            # print(deserialize_dict)
+            return deserialize_dict
 
         except Exception as e:
             return {'error': str(e)}
 
+class Posts(Resource):
+    def make_parser_args(self, parser):
+        parser.add_argument('user_id', type=int, help='User of post')
+        parser.add_argument('title', type=str, help='Title of post')
+        parser.add_argument('time', type=str, help='Time of post')
+        parser.add_argument('expiry', type=str, help='Expiry time of post')
+        parser.add_argument('last_modified', type=str, help='Last modified time of post')
+        parser.add_argument('description', type=str, help='Description of post')
+        parser.add_argument('location', type=str, help='Location to create user')
+        parser.add_argument('lat', type=float, help='Latitude of post')
+        parser.add_argument('lon', type=float, help='Longitude time of post')
+
+    def get(self):
+        try:
+            stmt = select([posts.c.id, posts.c.user_id, posts.c.title, posts.c.time, posts.c.expiry, posts.c.last_modified,
+                 posts.c.description, posts.c.location, posts.c.lat, posts.c.lon]) \
+                .select_from(posts)
+            res = conn.execute(stmt)
+            res_dict = [dict(r) for r in res]
+            serialize_dict = json.dumps(res_dict[0], default=alchemyencoder)
+            deserialize_dict = json.loads(serialize_dict)
+            return deserialize_dict
+
+        except Exception as e:
+            return {'error': str(e)}
+
+
 class User(Resource):
     def get(self, user_id):
         try:
-
             stmt = select([users.c.id, users.c.name, users.c.email, users.c.phone, users.c.location])\
                 .select_from(users).where(users.c.id == user_id)
             res = conn.execute(stmt)
@@ -193,6 +220,7 @@ class Login(Resource):
 api.add_resource(Users, '/users')
 api.add_resource(User, '/users/<string:user_id>')
 api.add_resource(Login, '/login')
+api.add_resource(Posts, '/posts/')
 api.add_resource(Post, '/posts/<string:post_id>')
 
 if __name__ == '__main__':
