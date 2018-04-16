@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from flask_restful import Resource, Api, reqparse, current_app
-from sqlalchemy import create_engine, Float, DateTime, select, insert, MetaData, Table, Column, Integer, String, ForeignKey, Sequence
+from sqlalchemy import create_engine, Float, DateTime, select, insert, MetaData, Table, Column, Integer, String, ForeignKey, Sequence, update
 import decimal, datetime
 import json
 import bcrypt
@@ -114,6 +114,29 @@ class Posts(Resource):
         except Exception as e:
             return {'error': str(e)}
 
+    def post(self):     #create post
+        # Parse the arguments
+        parser = reqparse.RequestParser()
+        self.make_parser_args(parser)
+        args = parser.parse_args()
+
+        _postUserId = args['user_id']
+        _postTitle = args['title']
+        _postTime = args['time']
+        _postExpiry = args['expiry']
+        _postLastModified = args['last_modified']
+        _postDescription = args['description']
+        _postLocation = args['location']
+        _postLat = args['lat']
+        _postLon = args['lon']
+
+        #TODO: validate inputs
+
+        stmt = posts.insert().values(user_id=_postUserId, title=_postTitle, time=_postTime, expiry=_postExpiry, last_modified=_postLastModified,
+                                         description=_postDescription, location=_postLocation, lat=_postLat, lon=_postLon)
+        res = conn.execute(stmt)
+        return
+
 
 class User(Resource):
     def make_parser_args(self, parser):
@@ -144,8 +167,32 @@ class User(Resource):
         parser = reqparse.RequestParser()
         self.make_parser_args(parser)
         args = parser.parse_args()
-        print('PUT /users/' + user_id)
-        print(get_jwt())
+
+        _userEmail = args['email']
+        _userName = args['name']
+        # _userPassword = args['password']
+        _userPhone = args['phone']
+        _userLocation = args['location']
+
+        user_jwt = get_jwt()
+        if (user_jwt['id'] != int(user_id)):
+            return {}, 404
+
+        try:
+            stmt = select([users.c.id, users.c.name, users.c.email, users.c.phone, users.c.location])\
+                .select_from(users).where((users.c.id != user_id) & (users.c.email == _userEmail))    #checks if email has been used by another user
+            res = conn.execute(stmt)
+            res_dict = [dict(r) for r in res]
+            if len(res_dict) > 0:
+                return {}, 400
+
+            stmt = update(users).where(users.c.id == user_jwt['id']).\
+                values(email=_userEmail, name=_userName, phone=_userPhone, location=_userLocation)
+            res = conn.execute(stmt)
+            return {}, 200
+
+        except Exception as e:
+            return {'error': str(e)}
 
 class Users(Resource):
     def make_parser_args(self, parser):
