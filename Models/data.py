@@ -27,3 +27,11 @@ posts = Table('posts', metadata,
     Column('lat', Float),
     Column('lon', Float),
 )
+
+comments = Table('comments', metadata,
+    Column('id', Integer, Sequence('comment_id_seq'), primary_key=True),
+    Column('post_id', Integer, ForeignKey("posts.id"), nullable=False),
+    Column('user_id', Integer, ForeignKey("users.id"), nullable=False),
+    Column('text_body', String(5000), nullable=False),
+    Column('date', DateTime, nullable=False),
+)

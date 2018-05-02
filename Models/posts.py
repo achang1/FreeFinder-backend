@@ -1,17 +1,7 @@
 from flask_restful import Resource, reqparse
 from sqlalchemy import select, DateTime
 import json
-from Models import data
-import decimal, datetime
-
-# metadata.create_all(engine)
-#Usage: json.dumps([dict(r) for r in res], default=alchemyencoder)
-def alchemyencoder(obj):
-    """JSON encoder function for SQLAlchemy special classes."""
-    if isinstance(obj, (datetime, DateTime)):
-        return obj.isoformat()
-    elif isinstance(obj, decimal.Decimal):
-        return float(obj)
+from Models import data, helperFns
 
 class Post(Resource):
     def get(self, post_id): #HTTP verb to retrieve something
@@ -23,7 +13,7 @@ class Post(Resource):
             res_dict = [dict(r) for r in res]
             if len(res_dict) == 0:
                 return {}, 404
-            serialize_dict = json.dumps(res_dict[0], default=alchemyencoder)
+            serialize_dict = json.dumps(res_dict[0], default=helperFns.alchemyencoder)
             deserialize_dict = json.loads(serialize_dict)
             # print(deserialize_dict)
             return deserialize_dict
@@ -50,7 +40,7 @@ class Posts(Resource):
                 .select_from(data.posts)
             res = data.conn.execute(stmt)
             res_dict = [dict(r) for r in res]
-            serialize_dict = json.dumps(res_dict[0], default=alchemyencoder)
+            serialize_dict = json.dumps(res_dict[0], default=helperFns.alchemyencoder)
             deserialize_dict = json.loads(serialize_dict)
             return deserialize_dict
 
