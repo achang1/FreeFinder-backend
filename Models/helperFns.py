@@ -1,5 +1,6 @@
-import decimal, datetime
+import decimal
 from sqlalchemy import DateTime
+from datetime import datetime
 
 # metadata.create_all(engine)
 #Usage: json.dumps([dict(r) for r in res], default=alchemyencoder)
