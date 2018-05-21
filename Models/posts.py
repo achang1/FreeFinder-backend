@@ -15,7 +15,6 @@ class Post(Resource):
                 return {}, 404
             serialize_dict = json.dumps(res_dict[0], default=helperFns.alchemyencoder)
             deserialize_dict = json.loads(serialize_dict)
-            # print(deserialize_dict)
             return deserialize_dict
 
         except Exception as e:
@@ -57,7 +56,7 @@ class Posts(Resource):
         _postTitle = args['title']
         _postTime = args['time']
         _postExpiry = args['expiry']
-        _postLastModified = args['last_modified']
+        # _postLastModified = args['last_modified']
         _postDescription = args['description']
         _postLocation = args['location']
         _postLat = args['lat']
@@ -65,7 +64,6 @@ class Posts(Resource):
 
         #TODO: validate inputs
 
-        stmt = data.posts.insert().values(user_id=_postUserId, title=_postTitle, time=_postTime, expiry=_postExpiry, last_modified=_postLastModified,
-                                         description=_postDescription, location=_postLocation, lat=_postLat, lon=_postLon)
+        stmt = data.posts.insert().values(user_id=_postUserId, title=_postTitle, time=_postTime, expiry=_postExpiry, description=_postDescription, location=_postLocation, lat=_postLat, lon=_postLon)
         res = data.conn.execute(stmt)
         return
