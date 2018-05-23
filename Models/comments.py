@@ -53,6 +53,8 @@ class Comments(Resource):
         _commentTextBody = args['text_body']
         _commentDate = args['date']
 
+        #TODO: get username
+
         #TODO: validate inputs
 
         stmt = data.comments.insert().values(post_id=_commentPostId, user_id=_commentUserId, text_body=_commentTextBody, date=_commentDate)

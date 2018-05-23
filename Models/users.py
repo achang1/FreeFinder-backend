@@ -100,8 +100,6 @@ class Users(Resource):
         res = data.conn.execute(stmt)
         res_dict = [dict(r) for r in res]
 
-        #TODO: validate inputs
-
         password_bytes = _userPassword.encode('utf-8')
         hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
 
