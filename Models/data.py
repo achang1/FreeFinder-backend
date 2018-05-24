@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine, Float, DateTime, MetaData, Table, Column, Integer, String, ForeignKey, Sequence
 from datetime import datetime
+from .credentials import db
 
-engine = create_engine('mysql://freefinder_admin:test123@70.79.100.163/ff_db')
+conn_string = ('mysql://' + db['user'] + ":" + db['password'] + '@' + db['host'] + '/' + db['database'])
+engine = create_engine(conn_string)
 conn = engine.connect()
 
 metadata = MetaData()
