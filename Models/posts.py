@@ -1,5 +1,10 @@
 from flask_restful import Resource, reqparse
 from sqlalchemy import select, DateTime, update
+
+from flask_jwt_simple import (
+    jwt_required, create_jwt, get_jwt
+)
+
 import json
 from flask_jwt_simple import (
     jwt_required, create_jwt, get_jwt
@@ -87,11 +92,16 @@ class Posts(Resource):
         except Exception as e:
             return {'error': str(e)}
 
+    @jwt_required
     def post(self):     #create post
         # Parse the arguments
         parser = reqparse.RequestParser()
         self.make_parser_args(parser)
         args = parser.parse_args()
+
+        user_jwt = get_jwt()
+        jwt_user_id = user_jwt['id']
+        print("user jwt id:", jwt_user_id)
 
         _postUserId = args['user_id']
         _postTitle = args['title']
