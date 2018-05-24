@@ -101,9 +101,9 @@ class Posts(Resource):
 
         user_jwt = get_jwt()
         jwt_user_id = user_jwt['id']
-        print("user jwt id:", jwt_user_id)
+        # print("user jwt id:", jwt_user_id)
 
-        _postUserId = args['user_id']
+        # _postUserId = args['user_id']
         _postTitle = args['title']
         _postTime = args['time']
         _postExpiry = args['expiry']
@@ -119,7 +119,7 @@ class Posts(Resource):
         elif (_postLon >= 180) or (_postLon <= -180):
             return {'message': 'Invalid Request'}, 400
         else:
-            stmt = data.posts.insert().values(user_id=_postUserId, title=_postTitle, time=_postTime, expiry=_postExpiry,
+            stmt = data.posts.insert().values(user_id=jwt_user_id, title=_postTitle, time=_postTime, expiry=_postExpiry,
                                               description=_postDescription, location=_postLocation, lat=_postLat, lon=_postLon)
             res = data.conn.execute(stmt)
         return
