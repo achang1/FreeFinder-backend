@@ -35,7 +35,7 @@ class Post(Resource):
             return {'error': str(e)}
 
     @jwt_required
-    def put(self, post_id, user_id):
+    def put(self, post_id):
         parser = reqparse.RequestParser()
         self.make_parser_args(parser)
         args = parser.parse_args()
@@ -49,8 +49,6 @@ class Post(Resource):
 
         user_jwt = get_jwt()
         jwt_user_id = user_jwt['id']
-        if jwt_user_id != int(user_id):
-            return {}, 403
 
         try:
             stmt = select([data.posts.c.id, data.posts.c.user_id, data.posts.c.title, data.posts.c.time, data.posts.c.expiry,
@@ -58,8 +56,14 @@ class Post(Resource):
                 .select_from(data.posts).where(data.posts.c.id == post_id)
             res = data.conn.execute(stmt)
             res_dict = [dict(r) for r in res]
+
+            if jwt_user_id != res_dict[0]['user_id']:
+                return {'message': 'Unauthorized'}, 403
+
             if len(res_dict) == 0:
-                return {}, 404
+                return {'message': 'Post does not exist'}, 404
+
+            #TODO: check if fields are modified
 
             stmt = update(data.posts).where(data.posts.c.id == post_id). \
                 values(title=_postTitle, last_modified=_postLastModified, description=_postDescription,
@@ -114,6 +118,8 @@ class Posts(Resource):
         _postLocation = args['location']
         _postLat = args['lat']
         _postLon = args['lon']
+
+        #TODO: check validity of user
 
         #checking validity of lat and lon
         if (_postLat >= 90) or (_postLat <= -90):
