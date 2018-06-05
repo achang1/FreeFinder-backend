@@ -1,10 +1,11 @@
 from flask_restful import Resource, reqparse
-from sqlalchemy import select, DateTime, update
+from sqlalchemy import select, DateTime, update, func
 import json
 from flask_jwt_simple import (
     jwt_required, create_jwt, get_jwt
 )
 from Models import data, helperFns
+import traceback
 
 class Post(Resource):
     def make_parser_args(self, parser):
@@ -93,7 +94,7 @@ class Posts(Resource):
                 .select_from(data.posts)
             res = data.conn.execute(stmt)
             res_dict = [dict(r) for r in res]
-            serialize_dict = json.dumps(res_dict[0], default=helperFns.alchemyencoder)
+            serialize_dict = json.dumps(res_dict, default=helperFns.alchemyencoder)
             deserialize_dict = json.loads(serialize_dict)
             return deserialize_dict
 
@@ -131,3 +132,41 @@ class Posts(Resource):
                                               description=_postDescription, location=_postLocation, lat=_postLat, lon=_postLon)
             res = data.conn.execute(stmt)
         return
+
+
+def calc_distance(p1, p2):
+    return func.sqrt(func.pow(69.1 * (p1[0] - p2[0], 2) + func.pow(53.0 * (p1[1] - p2[1]), 2)))
+
+
+class NearbyPosts(Resource):
+    def get(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('lat', type=float, help='current latitude', location='args')
+        parser.add_argument('lon', type=float, help='current longitude', location='args')
+        args = parser.parse_args()
+
+        _lat = args['lat']
+        _lon = args['lon']
+
+        lat_float = float(_lat)
+        lon_float = float(_lon)
+
+        try:
+            # stmt = select([data.posts.c.id, data.posts.c.user_id, data.posts.c.title, data.posts.c.time, data.posts.c.expiry, data.posts.c.last_modified,
+            #                data.posts.c.description, data.posts.c.location, data.posts.c.lat, data.posts.c.lon]) \
+            #     .select_from(data.posts).order_by(calc_distance(data.posts.get_lat_lon(), (lat_float, lon_float)))
+            # res = data.conn.execute(stmt)
+
+            query = "SELECT `id`, `user_id`, `title`, `time`, `expiry`, `last_modified`, `description`, `location`, `lat`, `lon`," \
+                    "ACOS(SIN(PI()*`lat`/180.0)*SIN(PI()*"+str(lat_float)+"/180.0)+COS(PI()*`lat`/180.0)*COS(PI()*"+str(lat_float)+"/180.0)*COS(PI()*`lon`/180.0-PI()*"+str(lon_float)+"/180.0))*6371 as `distance`" \
+                    "FROM `posts` WHERE `lat` IS NOT NULL ORDER BY `distance` ASC"
+            print(query)
+            res = data.conn.execute(query)
+            res_dict = [dict(r) for r in res]
+            serialize_dict = json.dumps(res_dict, default=helperFns.alchemyencoder)
+            deserialize_dict = json.loads(serialize_dict)
+            return deserialize_dict
+
+        except Exception as e:
+            traceback.print_exc()
+            return {'error': str(e)}

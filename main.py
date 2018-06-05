@@ -35,6 +35,7 @@ def add_claims_to_access_token(body):
 api.add_resource(users.Users, '/users')
 api.add_resource(users.User, '/users/<string:user_id>')
 api.add_resource(users.Login, '/login')
+api.add_resource(posts.NearbyPosts, '/posts/nearby')
 api.add_resource(posts.Posts, '/posts')
 api.add_resource(posts.Post, '/posts/<string:post_id>')
 api.add_resource(comments.Comments, '/comments/')
