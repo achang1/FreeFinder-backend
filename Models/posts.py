@@ -57,6 +57,7 @@ class Post(Resource):
                 .select_from(data.posts).where(data.posts.c.id == post_id)
             res = data.conn.execute(stmt)
             res_dict = [dict(r) for r in res]
+            print(res_dict)
 
             if jwt_user_id != res_dict[0]['user_id']:
                 return {'message': 'Unauthorized'}, 403
@@ -64,7 +65,18 @@ class Post(Resource):
             if len(res_dict) == 0:
                 return {'message': 'Post does not exist'}, 404
 
-            #TODO: check if fields are modified
+            if _postTitle is None:
+                _postTitle = res_dict[0]['title']
+            if _postLastModified is None:
+                _postLastModified = res_dict[0]['last_modified']
+            if _postDescription is None:
+                _postDescription = res_dict[0]['description']
+            if _postLocation is None:
+                _postLocation = res_dict[0]['location']
+            if _postLat is None:
+                _postLat = res_dict[0]['lat']
+            if _postLon is None:
+                _postLon = res_dict[0]['lon']
 
             stmt = update(data.posts).where(data.posts.c.id == post_id). \
                 values(title=_postTitle, last_modified=_postLastModified, description=_postDescription,
